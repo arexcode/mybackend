@@ -2,9 +2,12 @@ import { NavBar } from "../components";
 
 export function MainLayout({ children }){
     return(
-        <>
-        <NavBar />
-        { children }
-        </>
+        <div className="flex flex-col min-h-screen">
+            <NavBar />
+            <main className="flex-grow">
+                { children }
+            </main>
+
+        </div>
     )
 }

@@ -5,15 +5,26 @@ export const LogoutButton = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
+        // Primero, prepara la navegación para evitar pantalla en blanco
+        const navigateToLogin = () => {
+            navigate('/login', { replace: true });
+        };
+
+        // Mostrar mensaje de éxito
+        toast.success('Sesión cerrada exitosamente', {
+            onClose: navigateToLogin,
+            autoClose: 1000
+        });
+        
         // Limpiar tokens del localStorage
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
         
-        // Mostrar mensaje de éxito
-        toast.success('Sesión cerrada exitosamente');
+        // Disparar evento de logout para actualizar componentes
+        window.dispatchEvent(new Event('logout'));
         
-        // Redirigir al login
-        navigate('/login');
+        // Iniciar redirección inmediata en caso de que el toast no se cierre
+        setTimeout(navigateToLogin, 1200);
     };
 
     return (

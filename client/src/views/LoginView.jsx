@@ -5,12 +5,14 @@ import { toast } from 'react-toastify'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import { useNavigate } from "react-router-dom"
+import classNames from 'classnames'
 
 export function LoginView() {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [loginError, setLoginError] = useState(null)
   
   const { onInputChanged, email, password} = useForm({
     email: '',
@@ -37,60 +39,70 @@ export function LoginView() {
   }
 
   const onLoginUp = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     
     if (!validateForm()) {
-      return
+      return;
     }
 
     try {
-      setLoading(true)
-      const res = await axios.post('http://127.0.0.1:8000/api/token/', {
+      setLoading(true);
+      setLoginError(null);
+      
+      console.log('Iniciando proceso de login con:', { email: email, password: '***' });
+      
+      const response = await axios.post('http://127.0.0.1:8000/api/token/', {
         email,
-        password
-      })
-
-      if (res.status === 200) {
-        // Guardar el token en localStorage
-        localStorage.setItem('token', res.data.access)
-        localStorage.setItem('refresh_token', res.data.refresh)
-        
-        console.log( localStorage.getItem('token') )
-
-        toast.success('Inicio de sesión exitoso')
-        // Redirigir al dashboard o página principal
-        navigate('/')
-      }
+        password,
+      });
+      
+      console.log('Respuesta exitosa del servidor:', response.status);
+      
+      // Guardar tokens en localStorage
+      localStorage.setItem('token', response.data.access);
+      localStorage.setItem('refresh_token', response.data.refresh);
+      
+      // Notificar a otros componentes sobre el inicio de sesión exitoso
+      window.dispatchEvent(new Event('login'));
+      
+      toast.success('Inicio de sesión exitoso');
+      
+      // Redirigir al usuario a la página principal con un small delay para permitir que se complete el almacenamiento
+      setTimeout(() => {
+        navigate('/');
+      }, 100);
+      
     } catch (error) {
+      setLoading(false);
+      console.error('Error durante el login:', error);
+      
+      // Manejar los diferentes tipos de errores
       if (error.response) {
-        // El servidor respondió con un código de error
-        switch (error.response.status) {
-          case 400:
-            toast.error('Datos de inicio de sesión inválidos')
-            break
-          case 401:
-            toast.error('Credenciales incorrectas')
-            break
-          case 404:
-            toast.error('Usuario no encontrado')
-            break
-          case 500:
-            toast.error('Error del servidor')
-            break
-          default:
-            toast.error('Error al iniciar sesión')
+        // El servidor respondió con un estado de error
+        if (error.response.status === 401) {
+          setLoginError('Credenciales inválidas. Por favor, verifica tu email y contraseña.');
+        } else if (error.response.data.detail) {
+          setLoginError(error.response.data.detail);
+        } else {
+          setLoginError('Error en la autenticación. Por favor, intenta nuevamente.');
         }
       } else if (error.request) {
-        // La solicitud fue hecha pero no se recibió respuesta
-        toast.error('No se pudo conectar con el servidor')
+        // La solicitud se hizo pero no se recibió respuesta
+        setLoginError('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
       } else {
-        // Error al configurar la solicitud
-        toast.error('Error al procesar la solicitud')
+        // Algo sucedió en la configuración de la solicitud
+        setLoginError('Error al intentar iniciar sesión. Por favor, intenta nuevamente.');
       }
+      
+      toast.error('Error al iniciar sesión');
     } finally {
-      setLoading(false)
+      // Asegurarse de que isLoading se establezca en false después de un pequeño retraso
+      // para evitar la sensación de parpadeo rápido del botón
+      setTimeout(() => {
+        setLoading(false);
+      }, 300);
     }
-  }
+  };
 
   return (
     <>
@@ -116,9 +128,10 @@ export function LoginView() {
                 onChange={onInputChanged}  
                 type="email"
                 placeholder="usuario@digitalbuho.com"
-                className={`w-full rounded-md border p-2.5 outline-none ${
-                  errors.email ? 'border-red-500' : 'border-gray-300 focus:border-gray-400'
-                }`}
+                className={classNames(
+                  errors.email ? 'border-red-500' : 'border-gray-300 focus:border-gray-400',
+                  'w-full rounded-md border p-2.5 outline-none'
+                )}
               />
               {errors.email && (
                 <p className="text-sm text-red-500">{errors.email}</p>
@@ -135,9 +148,10 @@ export function LoginView() {
                   name="password"
                   onChange={onInputChanged}
                   type={showPassword ? "text" : "password"}
-                  className={`w-full rounded-md border p-2.5 outline-none ${
-                    errors.password ? 'border-red-500' : 'border-gray-300 focus:border-gray-400'
-                  }`}
+                  className={classNames(
+                    errors.password ? 'border-red-500' : 'border-gray-300 focus:border-gray-400',
+                    'w-full rounded-md border p-2.5 outline-none'
+                  )}
                 />
                 <button
                   type="button"
@@ -174,12 +188,19 @@ export function LoginView() {
               )}
             </div>
 
+            {loginError && (
+              <div className="mb-4">
+                <p className="text-red-500 text-sm">{loginError}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
-              className={`w-full rounded-md py-2.5 font-medium text-white ${
+              className={classNames(
+                'w-full rounded-md py-2.5 font-medium text-white',
                 loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-900 hover:bg-gray-800'
-              }`}
+              )}
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>

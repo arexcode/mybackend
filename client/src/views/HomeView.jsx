@@ -2,6 +2,7 @@ import { LogoutButton } from '../components/LogoutButton';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { Link } from 'react-router-dom';
 
 export function HomeView() {
     const [proyectos, setProyectos] = useState([]);
@@ -54,6 +55,7 @@ export function HomeView() {
           descripcion: proyecto.descripcion,
           prioridad: mapPrioridad(proyecto.prioridad),
           estado: mapEstado(proyecto.estado),
+          estadoCodigo: proyecto.estado,
           fechaLimite: formatearFecha(proyecto.fechaLimite),
           responsable: proyecto.responsable ? proyecto.responsable.email : 'Sin asignar',
           responsable_id: proyecto.responsable ? proyecto.responsable.id : null,
@@ -81,9 +83,10 @@ export function HomeView() {
         // Calcular estadísticas
         const estadisticas = {
           total: proyectosFiltrados.length,
-          enProgreso: proyectosFiltrados.filter(p => p.estado === 'En progreso').length,
-          pendientes: proyectosFiltrados.filter(p => p.estado === 'Pendiente').length,
-          completados: proyectosFiltrados.filter(p => p.estado === 'Completado').length
+          enProgreso: proyectosFiltrados.filter(p => p.estadoCodigo === 'E').length,
+          pendientes: proyectosFiltrados.filter(p => p.estadoCodigo === 'P').length,
+          completados: proyectosFiltrados.filter(p => p.estadoCodigo === 'C').length,
+          atrasados: proyectosFiltrados.filter(p => p.estadoCodigo === 'A').length
         };
         
         setStats(estadisticas);
@@ -202,7 +205,7 @@ export function HomeView() {
               <p className="text-sm text-gray-500">En progreso</p>
               <p className="text-2xl font-bold">{stats.enProgreso}</p>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+            <div className="bg-white p-4 rounded-lg shadow border-l-4 border-purple-500">
               <p className="text-sm text-gray-500">Pendientes</p>
               <p className="text-2xl font-bold">{stats.pendientes}</p>
             </div>
@@ -211,6 +214,16 @@ export function HomeView() {
               <p className="text-2xl font-bold">{stats.completados}</p>
             </div>
           </div>
+
+          {stats.atrasados > 0 && (
+            <div className="mb-4">
+              <div className="bg-white p-4 rounded-lg shadow border-l-4 border-red-500">
+                <p className="text-sm text-gray-500">Proyectos atrasados</p>
+                <p className="text-2xl font-bold">{stats.atrasados}</p>
+                <p className="text-xs text-red-500 mt-1">¡Requieren atención inmediata!</p>
+              </div>
+            </div>
+          )}
 
           {!currentUser ? (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mt-6">
@@ -233,7 +246,9 @@ export function HomeView() {
               {proyectos.map((proyecto) => (
                 <div
                   key={proyecto.id}
-                  className="bg-white rounded-lg overflow-hidden shadow border border-gray-100 hover:shadow-md transition-shadow"
+                  className={`bg-white rounded-lg overflow-hidden shadow border border-gray-100 hover:shadow-md transition-shadow ${
+                    proyecto.estadoCodigo === 'C' ? 'border-green-500 border-2' : ''
+                  } ${proyecto.estadoCodigo === 'A' ? 'border-red-500 border-2' : ''}`}
                 >
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-3">
@@ -251,7 +266,14 @@ export function HomeView() {
                     <div className="flex flex-col gap-3 mb-4">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Estado:</span>
-                        <span className={`px-2 py-0.5 rounded ${getEstadoColor(proyecto.estado)}`}>{proyecto.estado}</span>
+                        <span className={`px-2 py-0.5 rounded ${getEstadoColor(proyecto.estado)}`}>
+                          {proyecto.estado}
+                          {proyecto.estadoCodigo === 'C' && (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Fecha límite:</span>
@@ -300,7 +322,7 @@ export function HomeView() {
                         </svg>
                         Actualizar
                       </button>
-                      <button className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                      <Link to={`/proyecto/${proyecto.id}`} className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           className="h-4 w-4"
@@ -322,7 +344,7 @@ export function HomeView() {
                           />
                         </svg>
                         Ver detalles
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 </div>

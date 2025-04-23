@@ -19,16 +19,36 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'password', 'roles']
+        fields = ['id', 'email', 'username', 'password', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'roles']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         user = User.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
-            password=validated_data['password']
+            password=validated_data['password'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', ''),
+            is_staff=validated_data.get('is_staff', False),
+            is_superuser=validated_data.get('is_superuser', False)
         )
         return user
+        
+    def update(self, instance, validated_data):
+        # Actualizar campos de usuario
+        instance.email = validated_data.get('email', instance.email)
+        instance.username = validated_data.get('username', instance.username)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.is_staff = validated_data.get('is_staff', instance.is_staff)
+        instance.is_superuser = validated_data.get('is_superuser', instance.is_superuser)
+        
+        # Si se proporciona una nueva contraseña, actualizarla
+        if 'password' in validated_data:
+            instance.set_password(validated_data['password'])
+            
+        instance.save()
+        return instance
 
 class DepartamentoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -108,4 +128,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['email'] = user.email
         token['roles'] = [role.name for role in user.roles.all()]
+        token['is_staff'] = user.is_staff
+        token['is_superuser'] = user.is_superuser
+        print(f"Token generado para {user.email}: is_staff={user.is_staff}, is_superuser={user.is_superuser}")
         return token
